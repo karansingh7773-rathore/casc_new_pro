@@ -1,0 +1,7 @@
+{
+  "name": "Sentinel Connect",
+  "description": "A collaborative community safety platform connecting homeowners with security cameras to authorities for rapid incident resolution using AI-powered video analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

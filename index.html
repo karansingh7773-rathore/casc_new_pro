@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel Connect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Iconify Script -->
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <!-- Mapbox GL JS CSS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              850: '#1e1e22',
+              900: '#18181b',
+              950: '#09090b',
+            },
+            orange: {
+              800: '#9a3412',
+            }
+          },
+          animation: {
+            'clip': 'clipReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Theme Overrides */
+    body {
+      background-color: #18181b;
+      color: #d4d4d8;
+    }
+
+    /* Grid Background Lines */
+    .bg-grid-pattern {
+      background-size: 100px 100%;
+      background-image: linear-gradient(to right, rgba(154, 52, 18, 0.1) 1px, transparent 1px);
+      mask-image: linear-gradient(to bottom, transparent 5%, black 40%, black 80%, transparent 95%);
+    }
+
+    /* Animations */
+    @keyframes clipReveal {
+      0% {
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+        transform: translateY(40px);
+        filter: blur(10px);
+      }
+
+      100% {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        transform: translateY(0);
+        filter: blur(0);
+      }
+    }
+
+    @keyframes borderBeam {
+      0% {
+        left: -100%;
+      }
+
+      100% {
+        left: 100%;
+      }
+    }
+
+    .animate-clip {
+      animation: clipReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .delay-100 {
+      animation-delay: 0.1s;
+    }
+
+    .delay-200 {
+      animation-delay: 0.2s;
+    }
+
+    .delay-300 {
+      animation-delay: 0.3s;
+    }
+
+    /* Custom UI Elements */
+    .glass-panel {
+      background: rgba(24, 24, 27, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(154, 52, 18, 0.3);
+    }
+
+    .gradient-border-card {
+      position: relative;
+      background: #18181b;
+      z-index: 1;
+    }
+
+    .gradient-border-card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(to bottom right, rgba(154, 52, 18, 0.5), rgba(239, 68, 68, 0.2));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      z-index: -1;
+    }
+
+    /* Border Beam Hover Effect */
+    .btn-beam {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-beam:hover::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 20px;
+      background: rgba(255, 255, 255, 0.4);
+      filter: blur(5px);
+      transform: skewX(-20deg);
+      animation: borderBeam 0.6s linear;
+    }
+
+    /* Selection */
+    ::selection {
+      background-color: #ef4444;
+      color: white;
+    }
+  </style>
+
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body class="bg-zinc-900 text-zinc-300 antialiased h-screen overflow-hidden">
+  <!-- Vertical Grid Lines (Container Size) -->
+  <div class="fixed inset-0 max-w-7xl mx-auto pointer-events-none z-0 flex justify-between px-6 opacity-30">
+    <div class="w-px h-full bg-orange-800/30"></div>
+    <div class="w-px h-full bg-orange-800/30 hidden md:block"></div>
+    <div class="w-px h-full bg-orange-800/30 hidden lg:block"></div>
+    <div class="w-px h-full bg-orange-800/30"></div>
+  </div>
+  <div id="root" class="h-full relative z-10"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
