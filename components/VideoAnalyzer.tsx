@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { analyzeVideoWithGemini } from '../services/geminiService';
 import { ChatMessage } from '../types';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
@@ -28,6 +28,13 @@ const styleTag = `
   @keyframes blink {
     50% { opacity: 0; }
   }
+  @keyframes dot-flow {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-4px); opacity: 1; }
+  }
+  .animate-dot-flow {
+    animation: dot-flow 1.4s ease-in-out infinite;
+  }
 `;
 
 // -- Sub-components --
@@ -53,7 +60,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   return <div dangerouslySetInnerHTML={parse(text)} className="leading-relaxed" />;
 };
 
-const TypewriterMessage: React.FC<{ text: string; onComplete?: () => void }> = ({ text, onComplete }) => {
+const TypewriterMessage: React.FC<{ text: string; onComplete?: () => void; onUpdate?: () => void }> = ({ text, onComplete, onUpdate }) => {
   const [displayedText, setDisplayedText] = useState('');
   const hasCompleted = useRef(false);
 
@@ -66,6 +73,8 @@ const TypewriterMessage: React.FC<{ text: string; onComplete?: () => void }> = (
       setDisplayedText((prev) => text.slice(0, index + 1));
       index++;
 
+      if (onUpdate) onUpdate();
+
       if (index >= text.length) {
         clearInterval(interval);
         hasCompleted.current = true;
@@ -74,7 +83,7 @@ const TypewriterMessage: React.FC<{ text: string; onComplete?: () => void }> = (
     }, speed);
 
     return () => clearInterval(interval);
-  }, [text, onComplete]);
+  }, [text, onComplete, onUpdate]);
 
   return (
     <div className="animate-blur-in">
@@ -98,13 +107,13 @@ export const VideoAnalyzer: React.FC<VideoAnalyzerProps> = ({ videoUrl, videoFil
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages, isLoading, scrollToBottom]);
 
   // Set slow playback speed
   useEffect(() => {
@@ -339,7 +348,7 @@ export const VideoAnalyzer: React.FC<VideoAnalyzerProps> = ({ videoUrl, videoFil
                     : 'bg-zinc-800 text-zinc-300 border border-orange-800/20 rounded-tl-sm'
                     }`}>
                     {msg.role === 'model' ? (
-                      <TypewriterMessage text={msg.text} />
+                      <TypewriterMessage text={msg.text} onUpdate={scrollToBottom} />
                     ) : (
                       <p>{msg.text}</p>
                     )}
@@ -352,12 +361,12 @@ export const VideoAnalyzer: React.FC<VideoAnalyzerProps> = ({ videoUrl, videoFil
               ))}
 
               {isLoading && (
-                <div className="flex justify-start animate-pulse">
+                <div className="flex justify-start">
                   <div className="w-8 h-8 rounded-full bg-zinc-800 mr-3"></div>
-                  <div className="bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700 w-24 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce delay-75"></div>
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce delay-150"></div>
+                  <div className="bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700 w-24 flex items-center gap-1.5 justify-center">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-dot-flow" style={{ animationDelay: '0s' }}></div>
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-dot-flow" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-dot-flow" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </div>
               )}
