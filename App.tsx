@@ -656,24 +656,23 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
   const [expandedReqId, setExpandedReqId] = useState<string | null>(null);
   const pendingCount = myRequests.filter(r => r.status === RequestStatus.PENDING).length;
 
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const videoContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
+
   // Debug logging
   console.log("🏠 HOMEOWNER VIEW DEBUG:", {
     currentUserId,
     totalRequests: requests.length,
-    myRequests: myRequests.length,
-    requestDetails: myRequests.map(r => ({
-      id: r.id,
-      status: r.status,
-      hasVideo: !!r.videoFile,
-      hasUrl: !!r.videoUrl
-    }))
+    myRequests: myRequests.length
   });
 
   // Auto-open notifications when there are pending requests
   React.useEffect(() => {
     if (pendingCount > 0 && !isNotificationsOpen) {
       setIsNotificationsOpen(true);
-      // Auto-expand first pending request
       const firstPending = myRequests.find(r => r.status === RequestStatus.PENDING);
       if (firstPending) {
         setExpandedReqId(firstPending.id);
@@ -681,11 +680,45 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
     }
   }, [pendingCount]);
 
+  const toggleFullscreen = () => {
+    if (!videoContainerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      videoContainerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Listen for fullscreen change events (esc key support)
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const handleAiAnalysis = async () => {
+    setIsAiAnalyzing(true);
+    setAiAnalysisResult(null);
+
+    // Simulate processing delay
+    setTimeout(() => {
+      setIsAiAnalyzing(false);
+      setAiAnalysisResult("Analysis Complete: No immediate threats detected. \n\nObservations:\n- Normal traffic pattern for this hour.\n- One parked vehicle (Blue Sedan) consistent with resident profile.\n- Lighting conditions: Good visibility.");
+    }, 2500);
+  };
+
   return (
-    <div className="min-h-screen text-zinc-200">
+    <div className="min-h-screen text-zinc-200 flex flex-col bg-zinc-950 font-serif">
       {/* Urgent Alert Banner for Pending Requests */}
       {pendingCount > 0 && (
-        <div className="bg-red-600 text-white px-6 py-3 flex items-center justify-between animate-pulse">
+        <div className="bg-red-600 text-white px-6 py-3 flex items-center justify-between animate-pulse sticky top-0 z-[60]">
           <div className="flex items-center gap-3">
             <iconify-icon icon="solar:danger-bold" class="text-2xl"></iconify-icon>
             <div>
@@ -705,7 +738,8 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
           </button>
         </div>
       )}
-      <header className="glass-panel border-b border-orange-800/20 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+
+      <header className="glass-panel border-b border-orange-800/20 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-md backdrop-blur-md bg-zinc-950/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shadow-lg shadow-green-600/20 border border-green-500/30">
             <iconify-icon icon="solar:home-smile-bold" class="text-white text-lg"></iconify-icon>
@@ -781,7 +815,6 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
                                   className="flex-1 cursor-pointer bg-red-600 hover:bg-red-500 text-white text-sm font-bold py-3 px-4 rounded-lg text-center transition-colors shadow-lg animate-pulse border-2 border-white"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    console.log("🖱️ Upload button clicked!");
                                   }}
                                 >
                                   <div className="flex items-center justify-center gap-2">
@@ -794,18 +827,13 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
                                     className="hidden"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      console.log("📂 File input clicked!");
                                     }}
                                     onChange={(e) => {
                                       e.stopPropagation();
-                                      console.log("📁 File input changed", e.target.files);
                                       if (e.target.files && e.target.files[0]) {
-                                        console.log("📤 Calling handleUploadVideo with:", { requestId: req.id, fileName: e.target.files[0].name });
                                         handleUploadVideo(req.id, e.target.files[0]);
                                         setIsNotificationsOpen(false);
                                         e.target.value = ''; // Reset input
-                                      } else {
-                                        console.warn("⚠️ No file selected");
                                       }
                                     }}
                                   />
@@ -846,102 +874,225 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 flex flex-col md:flex-row gap-8">
+      <main className="flex-1 max-w-7xl mx-auto p-6 w-full flex flex-col gap-8">
 
-        {/* Main Feed */}
-        <div className="flex-1">
-          {/* Status Card */}
-          <div className={`gradient-border-card rounded-2xl p-6 mb-8 flex items-center justify-between transition-colors shadow-lg`}>
-            <div>
-              <h2 className="text-lg font-bold text-zinc-100 mb-1">System Status</h2>
-              <p className="text-zinc-500 text-sm">
-                {myProfile?.isPrivate ? 'Privacy Mode is active. Your camera is hidden.' : 'Monitoring active. Connected to Sentinel Network.'}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                onClick={togglePrivacy}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border text-sm font-bold transition shadow-lg ${myProfile?.isPrivate
-                  ? 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:bg-zinc-700'
-                  : 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30'
-                  }`}
-              >
-                {myProfile?.isPrivate ? (
-                  <><iconify-icon icon="solar:eye-closed-bold"></iconify-icon> Privacy ON</>
-                ) : (
-                  <><span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-green-500"></span> Online</>
-                )}
-              </button>
-            </div>
-          </div>
+        {/* Top Section: Monitoring & Alerts */}
+        <div className="flex flex-col lg:flex-row gap-8">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Main Feed Column */}
+          <div className="flex-1 flex flex-col gap-6">
+
+            {/* Status Card */}
+            <div className="gradient-border-card rounded-2xl p-6 flex items-center justify-between transition-colors shadow-lg">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-100 mb-1 font-serif">System Status</h2>
+                <p className="text-zinc-500 text-sm font-sans">
+                  {myProfile?.isPrivate ? 'Privacy Mode is active. Your camera is hidden.' : 'Monitoring active. Connected to Sentinel Network.'}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  onClick={togglePrivacy}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full border text-sm font-bold transition shadow-lg ${myProfile?.isPrivate
+                    ? 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:bg-zinc-700'
+                    : 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30'
+                    }`}
+                >
+                  {myProfile?.isPrivate ? (
+                    <><iconify-icon icon="solar:eye-closed-bold"></iconify-icon> Privacy ON</>
+                  ) : (
+                    <><span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-green-500"></span> Online</>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Live Camera Feed */}
-            <div className="md:col-span-2">
-              <h3 className="text-xl font-bold text-zinc-100 mb-5 flex items-center">
-                <iconify-icon icon="solar:camera-bold" class="text-green-500 mr-3"></iconify-icon> Live Feed
-                <span className="ml-auto text-xs font-mono text-zinc-500 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> REC
-                </span>
-              </h3>
+            <div>
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="text-xl font-bold text-zinc-100 flex items-center font-serif">
+                  <iconify-icon icon="solar:camera-bold" class="text-green-500 mr-3"></iconify-icon> Live Feed
+                </h3>
 
-              <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl group">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAiAnalysis}
+                    disabled={isAiAnalyzing}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-xs font-bold hover:bg-indigo-600/30 hover:text-indigo-300 transition-all disabled:opacity-50"
+                  >
+                    {isAiAnalyzing ? <iconify-icon icon="svg-spinners:ring-resize"></iconify-icon> : <iconify-icon icon="solar:magic-stick-3-bold-duotone"></iconify-icon>}
+                    AI Analyze
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Analysis Result Panel */}
+              {aiAnalysisResult && (
+                <div className="mb-4 bg-indigo-950/30 border border-indigo-500/30 p-4 rounded-xl animate-clip relative">
+                  <button onClick={() => setAiAnalysisResult(null)} className="absolute top-2 right-2 text-indigo-400 hover:text-white"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button>
+                  <h4 className="text-indigo-300 font-bold text-sm mb-2 flex items-center gap-2">
+                    <iconify-icon icon="solar:smart-home-angle-bold"></iconify-icon> AI Sentinel Report
+                  </h4>
+                  <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">{aiAnalysisResult}</p>
+                </div>
+              )}
+
+              <div
+                ref={videoContainerRef}
+                className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl group"
+              >
                 {/* Video Player */}
                 <video
+                  ref={videoRef}
                   src="/cctv-loop.mp4"
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                 >
                 </video>
 
                 {/* Overlay UI */}
-                <div className="absolute top-4 left-4 bg-black/50 backdrop-blur px-2 py-1 rounded text-[10px] font-mono text-white border border-white/10">
-                  CAM-01 • {new Date().toLocaleTimeString()}
+                <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 items-start">
+                  {/* REC Indicator */}
+                  <div className="flex items-center gap-2 bg-black/60 backdrop-blur px-3 py-1.5 rounded-md border border-red-500/20 shadow-lg">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"></div>
+                    <span className="text-zinc-100 font-bold text-xs tracking-wider font-sans">REC</span>
+                  </div>
+                  {/* Cam Info */}
+                  <div className="bg-black/50 backdrop-blur px-2 py-1 rounded text-[10px] font-mono text-white border border-white/10">
+                    CAM-01 • {new Date().toLocaleTimeString()}
+                  </div>
                 </div>
 
-                <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+                <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+
+                {/* Controls - Show on hover */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="flex gap-2">
-                    <div className="w-8 h-8 rounded bg-white/10 backdrop-blur flex items-center justify-center text-white"><iconify-icon icon="solar:rewind-bold"></iconify-icon></div>
-                    <div className="w-8 h-8 rounded bg-red-600 flex items-center justify-center text-white"><iconify-icon icon="solar:pause-bold"></iconify-icon></div>
-                    <div className="w-8 h-8 rounded bg-white/10 backdrop-blur flex items-center justify-center text-white"><iconify-icon icon="solar:fast-forward-bold"></iconify-icon></div>
+                    <button className="w-8 h-8 rounded bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition"><iconify-icon icon="solar:rewind-bold"></iconify-icon></button>
+                    <button
+                      onClick={() => videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()}
+                      className="w-8 h-8 rounded bg-red-600 flex items-center justify-center text-white hover:bg-red-500 transition"
+                    >
+                      <iconify-icon icon="solar:pause-bold"></iconify-icon>
+                    </button>
+                    <button className="w-8 h-8 rounded bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition"><iconify-icon icon="solar:fast-forward-bold"></iconify-icon></button>
                   </div>
+
+                  <button
+                    onClick={toggleFullscreen}
+                    className="w-8 h-8 rounded bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition"
+                    title="Fullscreen"
+                  >
+                    <iconify-icon icon={isFullscreen ? "solar:minimize-square-bold" : "solar:maximize-square-bold"}></iconify-icon>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Right Sidebar: Community Alerts & Stats */}
+          <div className="w-full lg:w-96 flex flex-col gap-6">
+
+            {/* Alerts Panel */}
+            <div className="glass-panel rounded-2xl border border-orange-800/20 p-6 shadow-xl">
+              <h3 className="font-bold text-zinc-100 mb-6 flex items-center justify-between font-serif">
+                <span className="flex items-center"><iconify-icon icon="solar:radio-minimalistic-bold" class="text-red-500 mr-2"></iconify-icon> Alerts</span>
+                <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">LIVE</span>
+              </h3>
+              <div className="space-y-5 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {alerts.map(alert => (
+                  <div key={alert.id} className="relative pl-4 border-l-2 border-zinc-700 hover:border-red-500 transition-colors">
+                    <div className="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-zinc-700 border border-zinc-500"></div>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm ${alert.severity === 'high' ? 'bg-red-500 text-white shadow-red-500/20' :
+                        alert.severity === 'medium' ? 'bg-orange-500 text-white shadow-orange-500/20' : 'bg-red-600 text-white'
+                        }`}>
+                        {alert.severity}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 italic">{alert.date}</span>
+                    </div>
+                    <h4 className="font-bold text-zinc-200 text-sm mb-1 leading-snug">{alert.title}</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{alert.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Device Health Panel */}
+            <div className="glass-panel rounded-2xl border border-zinc-800 p-6 shadow-xl">
+              <h3 className="font-bold text-zinc-100 mb-4 flex items-center font-serif">
+                <iconify-icon icon="solar:server-square-bold" class="text-zinc-500 mr-2"></iconify-icon> Device Health
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                  <div className="text-xs text-zinc-500 mb-1">Signal Strength</div>
+                  <div className="text-green-400 font-bold flex items-center gap-1">
+                    <iconify-icon icon="solar:wi-fi-router-bold"></iconify-icon> Excellent
+                  </div>
+                </div>
+                <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                  <div className="text-xs text-zinc-500 mb-1">Battery Est.</div>
+                  <div className="text-zinc-200 font-bold flex items-center gap-1">
+                    <iconify-icon icon="solar:battery-charge-bold" class="text-green-500"></iconify-icon> Hardwired
+                  </div>
+                </div>
+                <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                  <div className="text-xs text-zinc-500 mb-1">Storage</div>
+                  <div className="text-zinc-200 font-bold flex items-center gap-1">
+                    <iconify-icon icon="solar:cloud-storage-bold" class="text-blue-500"></iconify-icon> 84% Used
+                  </div>
+                </div>
+                <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                  <div className="text-xs text-zinc-500 mb-1">Firmware</div>
+                  <div className="text-zinc-200 font-bold flex items-center gap-1">
+                    v2.4.1 <span className="text-[8px] bg-zinc-700 px-1 rounded">LATEST</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        {/* Right Sidebar: Community Alerts */}
-        <div className="w-full md:w-80">
-          <div className="glass-panel rounded-2xl border border-orange-800/20 p-6 sticky top-24 shadow-xl">
-            <h3 className="font-bold text-zinc-100 mb-6 flex items-center justify-between">
-              <span className="flex items-center"><iconify-icon icon="solar:radio-minimalistic-bold" class="text-red-500 mr-2"></iconify-icon> Alerts</span>
-              <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">LIVE</span>
-            </h3>
-            <div className="space-y-5">
-              {alerts.map(alert => (
-                <div key={alert.id} className="relative pl-4 border-l-2 border-zinc-700 hover:border-red-500 transition-colors">
-                  <div className="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-zinc-700 border border-zinc-500"></div>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm ${alert.severity === 'high' ? 'bg-red-500 text-white shadow-red-500/20' :
-                      alert.severity === 'medium' ? 'bg-orange-500 text-white shadow-orange-500/20' : 'bg-red-600 text-white'
-                      }`}>
-                      {alert.severity}
-                    </span>
-                    <span className="text-[10px] text-zinc-500 italic">{alert.date}</span>
-                  </div>
-                  <h4 className="font-bold text-zinc-200 text-sm mb-1 leading-snug">{alert.title}</h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">{alert.message}</p>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-6 py-2 text-xs font-bold text-center text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
-              View Archive
-            </button>
+        {/* Bottom Section: Recent Log */}
+        <div className="border-t border-zinc-800 pt-6">
+          <h3 className="text-lg font-bold text-zinc-100 mb-4 flex items-center font-serif">
+            <iconify-icon icon="solar:history-bold" class="text-zinc-500 mr-2"></iconify-icon> Recent Activity Log
+          </h3>
+          <div className="bg-zinc-900/40 rounded-xl overflow-hidden border border-zinc-800/50">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-zinc-900/80 text-zinc-500">
+                <tr>
+                  <th className="p-4 font-medium text-xs uppercase tracking-wider">Time</th>
+                  <th className="p-4 font-medium text-xs uppercase tracking-wider">Event</th>
+                  <th className="p-4 font-medium text-xs uppercase tracking-wider">Details</th>
+                  <th className="p-4 font-medium text-xs uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/50">
+                <tr className="hover:bg-zinc-800/30 transition-colors">
+                  <td className="p-4 text-zinc-400 font-mono text-xs">Today, 10:42 AM</td>
+                  <td className="p-4 font-bold text-zinc-200">Motion Detected</td>
+                  <td className="p-4 text-zinc-500">Front Yard - Person (Confidence 92%)</td>
+                  <td className="p-4"><span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-[10px] font-bold border border-green-500/20">LOGGED</span></td>
+                </tr>
+                <tr className="hover:bg-zinc-800/30 transition-colors">
+                  <td className="p-4 text-zinc-400 font-mono text-xs">Today, 09:15 AM</td>
+                  <td className="p-4 font-bold text-zinc-200">System Check</td>
+                  <td className="p-4 text-zinc-500">Automated diagnostic passed.</td>
+                  <td className="p-4"><span className="bg-zinc-700/30 text-zinc-400 px-2 py-1 rounded text-[10px] font-bold border border-zinc-700/50">INFO</span></td>
+                </tr>
+                <tr className="hover:bg-zinc-800/30 transition-colors">
+                  <td className="p-4 text-zinc-400 font-mono text-xs">Yesterday, 11:30 PM</td>
+                  <td className="p-4 font-bold text-zinc-200">Night Mode</td>
+                  <td className="p-4 text-zinc-500">IR Illuminators activated.</td>
+                  <td className="p-4"><span className="bg-blue-500/10 text-blue-500 px-2 py-1 rounded text-[10px] font-bold border border-blue-500/20">AUTO</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
