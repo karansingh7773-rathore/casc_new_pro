@@ -47,7 +47,7 @@ const LandingPage: React.FC<{ onLogin: (role: UserRole) => void }> = ({ onLogin 
           </div>
 
           <h1 className="text-5xl md:text-6xl font-extrabold text-zinc-100 mb-6 tracking-tight drop-shadow-md">
-            Sentinel <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500">Connect</span>
+            CASC <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500">CONNECT</span>
           </h1>
           <p className="text-zinc-500 text-lg max-w-xl mx-auto font-light leading-relaxed">
             Advanced Community Surveillance & Rapid Response Network
@@ -398,6 +398,19 @@ const PoliceDashboard: React.FC<PoliceDashboardProps> = ({
     })
     : cameras.filter(c => !c.isPrivate);
 
+  // Debug Police View
+  console.log("🚔 POLICE VIEW DEBUG:", {
+    totalRequests: requests.length,
+    approvedRequests: requests.filter(r => r.status === RequestStatus.APPROVED).length,
+    allRequests: requests.map(r => ({
+      id: r.id,
+      status: r.status,
+      cameraId: r.cameraId,
+      hasVideo: !!r.videoFile,
+      hasUrl: !!r.videoUrl
+    }))
+  });
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* POLICE HEADER */}
@@ -407,8 +420,8 @@ const PoliceDashboard: React.FC<PoliceDashboardProps> = ({
             <iconify-icon icon="solar:shield-bold" class="text-white text-xl"></iconify-icon>
           </div>
           <div>
-            <h1 className="font-bold text-zinc-100 leading-tight text-lg">Sentinel Command</h1>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Metropolitan Police Dept.</p>
+            <h1 className="font-bold text-zinc-100 leading-tight text-lg">CASC Command</h1>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Jaipur Police Dept.</p>
           </div>
         </div>
 
@@ -459,19 +472,8 @@ const PoliceDashboard: React.FC<PoliceDashboardProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {/* Debug Police View */}
-            {console.log("🚔 POLICE VIEW DEBUG:", {
-              totalRequests: requests.length,
-              approvedRequests: requests.filter(r => r.status === RequestStatus.APPROVED).length,
-              allRequests: requests.map(r => ({ 
-                id: r.id, 
-                status: r.status, 
-                cameraId: r.cameraId,
-                hasVideo: !!r.videoFile,
-                hasUrl: !!r.videoUrl
-              }))
-            })}
-            
+
+
             {/* Pending Analysis Requests */}
             {requests.filter(r => r.status === RequestStatus.APPROVED).length > 0 && (
               <div className="mb-6 bg-red-950/30 border border-red-500/20 rounded-lg overflow-hidden">
@@ -511,7 +513,7 @@ const PoliceDashboard: React.FC<PoliceDashboardProps> = ({
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                         <span className="font-bold text-zinc-200 text-sm">{inc.type}</span>
                       </div>
-                      <span className="text-[10px] text-zinc-500 font-mono">{inc.timestamp}</span>
+                      <span className="text-[10px] text-zinc-500">{inc.timestamp}</span>
                     </div>
                     <p className="text-xs text-zinc-500 mb-2">{inc.description}</p>
                   </div>
@@ -556,7 +558,7 @@ const PoliceDashboard: React.FC<PoliceDashboardProps> = ({
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 relative bg-zinc-950">
+        <div className="flex-1 relative bg-zinc-950 border-3 border-zinc-700">
           {/* Map Container */}
           <div id="map" ref={mapRef} className="w-full h-full z-0"></div>
 
@@ -749,7 +751,7 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
                           <div className="flex justify-between items-start mb-1">
                             <div className="flex flex-col gap-0.5">
                               <span className="text-sm font-bold text-zinc-200">Request from Authorities</span>
-                              <span className="text-[10px] text-zinc-500 font-mono">Case #{req.id.slice(-4)}</span>
+                              <span className="text-[10px] text-zinc-500">Case #{req.id.slice(-4)}</span>
                             </div>
                             <div className="flex flex-col items-end gap-1">
                               {req.status === RequestStatus.PENDING && (
@@ -775,7 +777,7 @@ const HomeownerDashboard: React.FC<HomeownerDashboardProps> = ({
 
                             {req.status === RequestStatus.PENDING && (
                               <div className="flex flex-col gap-2">
-                                <label 
+                                <label
                                   className="flex-1 cursor-pointer bg-red-600 hover:bg-red-500 text-white text-sm font-bold py-3 px-4 rounded-lg text-center transition-colors shadow-lg animate-pulse border-2 border-white"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1001,7 +1003,7 @@ export default function App() {
 
   const handleUploadVideo = (requestId: string, file: File) => {
     console.log("🎬 handleUploadVideo called:", { requestId, fileName: file?.name, fileSize: file?.size });
-    
+
     // Basic validation
     if (!requestId || !file) {
       console.error("❌ Invalid upload parameters", { requestId, file });
@@ -1014,11 +1016,11 @@ export default function App() {
 
     setRequests(prev => {
       console.log("📋 Current requests before update:", prev.map(r => ({ id: r.id, status: r.status, cameraId: r.cameraId })));
-      
+
       // Find the request
       const foundRequest = prev.find(r => String(r.id).trim() === String(requestId).trim());
       console.log("🔍 Looking for request:", requestId, "Found:", foundRequest?.id);
-      
+
       // Create a clean update
       const updated = prev.map(req => {
         if (String(req.id).trim() === String(requestId).trim()) {
@@ -1038,14 +1040,14 @@ export default function App() {
         }
         return req;
       });
-      
-      console.log("📊 Updated requests after map:", updated.map(r => ({ 
-        id: r.id, 
-        status: r.status, 
+
+      console.log("📊 Updated requests after map:", updated.map(r => ({
+        id: r.id,
+        status: r.status,
         hasVideo: !!r.videoFile,
-        hasUrl: !!r.videoUrl 
+        hasUrl: !!r.videoUrl
       })));
-      
+
       return updated;
     });
 

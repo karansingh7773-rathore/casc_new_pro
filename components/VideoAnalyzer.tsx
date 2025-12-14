@@ -48,7 +48,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
       // Italic
       .replace(/\*(.*?)\*/g, '<em class="italic text-zinc-400">$1</em>')
       // Inline Code
-      .replace(/`([^`]+)`/g, '<code class="bg-zinc-800 px-1 py-0.5 rounded text-orange-300 font-mono text-xs">$1</code>')
+      .replace(/`([^`]+)`/g, '<code class="bg-zinc-800 px-1 py-0.5 rounded text-orange-300 text-xs">$1</code>')
       // Lists (simple dash)
       .replace(/^- (.*)$/gm, '<li class="ml-4 list-disc">$1</li>')
       // Line breaks
@@ -308,7 +308,7 @@ export const VideoAnalyzer: React.FC<VideoAnalyzerProps> = ({ videoUrl, videoFil
                   <iconify-icon icon="solar:bot-bold" class="text-red-500"></iconify-icon>
                   AI Assistant
                 </h3>
-                <p className="text-[10px] text-zinc-500 font-mono tracking-wider">GEMINI 1.5 FLASH CONNECTED</p>
+                <p className="text-[10px] text-zinc-500 tracking-wider">GEMINI 1.5 FLASH CONNECTED</p>
               </div>
 
               <div className="flex gap-2">
